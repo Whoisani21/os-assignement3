@@ -1,0 +1,184 @@
+Assignment 0
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+static void die(const char *msg) {
+    perror(msg);
+    _exit(1);
+}
+
+int main(void) {
+    setbuf(stdout, NULL);
+    pid_t pid;
+    printf("[start] PID=%d, PPID=%d\n", getpid(), getppid());
+
+    pid = fork();
+    if (pid < 0) die("fork 1");
+    printf("[after fork1] PID=%d, PPID=%d, fork1 returned %d\n", getpid(), getppid(), (int)pid);
+
+    pid = fork();
+    if (pid < 0) die("fork 2");
+    printf("[after fork2] PID=%d, PPID=%d, fork2 returned %d\n", getpid(), getppid(), (int)pid);
+
+    pid = fork();
+    if (pid < 0) die("fork 3");
+    printf("[after fork3] PID=%d, PPID=%d, fork3 returned %d\n", getpid(), getppid(), (int)pid);
+
+    sleep(1);
+    while (waitpid(-1, NULL, 0) > 0) {}
+    return 0;
+}
+
+System Calls: Three sequential fork() calls are made. Each call duplicates the calling process.
+
+Return Values: fork() returns 0 in the child and >0 in the parent (child’s PID). This helps identify parents vs. children.
+
+Process Hierarchy: Up to 8 processes (2³) are created. Each new process continues execution after the fork() call where it was created.
+
+Flow of Execution: Every process prints its PID, PPID, and fork return value. The sleep(1) allows inspection with tools like pstree. waitpid ensures children are reaped.
+
+
+Assignment 1
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+static void die(const char *msg) { perror(msg); _exit(1); }
+
+int main(void) {
+    setbuf(stdout, NULL);
+    pid_t pid = fork();
+    if (pid < 0) die("fork");
+    if (pid == 0) {
+        execl("/bin/ls", "ls", "-la", (char*)NULL);
+        die("execl ls");
+    }
+    if (waitpid(pid, NULL, 0) < 0) die("waitpid");
+    printf("Parent process done\n");
+    return 0;
+}
+
+System Calls: One fork(), then child calls execl to run /bin/ls. Parent uses waitpid.
+
+Return Values: Parent gets child PID, child gets 0.
+
+Hierarchy: One parent, one child. Child replaces itself with ls.
+
+Execution Flow: ls output is shown, then parent prints its message.
+
+Assignment 2
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+static void die(const char *msg) { perror(msg); _exit(1); }
+
+int main(void) {
+    setbuf(stdout, NULL);
+    pid_t c1 = fork();
+    if (c1 < 0) die("fork c1");
+    if (c1 == 0) {
+        execl("/bin/ls", "ls", "-la", (char*)NULL);
+        die("execl ls");
+    }
+    pid_t c2 = fork();
+    if (c2 < 0) die("fork c2");
+    if (c2 == 0) {
+        execl("/bin/date", "date", (char*)NULL);
+        die("execl date");
+    }
+    if (waitpid(c1, NULL, 0) < 0) die("wait c1");
+    if (waitpid(c2, NULL, 0) < 0) die("wait c2");
+    printf("Parent process done\n");
+    return 0;
+}
+
+System Calls: Two fork() calls, two execl() calls, and waitpid() for synchronization.
+
+Return Values: Each fork() creates a child; in children, execl replaces process.
+
+Hierarchy: One parent with two children (siblings).
+
+Execution Flow: ls output, then date output, then parent message.
+
+Assignment 3
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+static void die(const char *msg) { perror(msg); _exit(1); }
+
+int main(void) {
+    setbuf(stdout, NULL);
+    pid_t pid = fork();
+    if (pid < 0) die("fork");
+    if (pid == 0) {
+        const char *msg = "Hello from the child process";
+        execl("/bin/echo", "echo", msg, (char*)NULL);
+        die("execl echo");
+    }
+    if (waitpid(pid, NULL, 0) < 0) die("waitpid");
+    printf("Parent process done\n");
+    return 0;
+}
+
+System Calls: One fork(), one execl(), one waitpid().
+
+Arguments: execl passes the string argument to /bin/echo.
+
+Hierarchy: One parent, one child.
+
+Execution Flow: Child prints its message, then parent prints completion.
+
+Assignment 4
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+static void die(const char *msg) { perror(msg); _exit(1); }
+
+int main(int argc, char **argv) {
+    setbuf(stdout, NULL);
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <word-to-search>\n", argv[0]);
+        return 2;
+    }
+    const char *word = argv[1];
+    const char *file = "test.txt";
+    pid_t pid = fork();
+    if (pid < 0) die("fork");
+    if (pid == 0) {
+        execl("/bin/grep", "grep", word, file, (char*)NULL);
+        die("execl grep");
+    }
+    if (waitpid(pid, NULL, 0) < 0) die("waitpid");
+    printf("Parent process completed\n");
+    return 0;
+}
+
+System Calls: fork(), then execl() to run grep, then waitpid().
+
+Arguments: grep receives two arguments: the search word and test.txt.
+
+Hierarchy: One parent, one child.
+
+Execution Flow: Child searches the file, prints matches, then parent prints its completion message.
+
+Repo link: https://git@github.com:Whoisani21/os-assignement3.git
+
