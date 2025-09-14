@@ -180,5 +180,5 @@ Hierarchy: One parent, one child.
 
 Execution Flow: Child searches the file, prints matches, then parent prints its completion message.
 
-Repo link: https://git@github.com:Whoisani21/os-assignement3.git
+Repo link: https://github.com/Whoisani21/os-assignement3.git
 
