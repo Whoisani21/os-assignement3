@@ -1,0 +1,3 @@
+This file contains main ideas.
+Another line without the word.
+main function appears in C programs.
